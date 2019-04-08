@@ -1084,7 +1084,6 @@ void PipelineCache::CreationThread() {
     // Check if need to shut down or set the completion event and dequeue the
     // pipeline if there is any.
     {
-      std::unique_lock<std::mutex> lock(creation_request_lock_);
       if (creation_threads_shutdown_ || creation_queue_.empty()) {
         if (creation_completion_set_event_ && creation_threads_busy_ == 0) {
           // Last pipeline in the queue created - signal the event if requested.
@@ -1094,7 +1093,6 @@ void PipelineCache::CreationThread() {
         if (creation_threads_shutdown_) {
           return;
         }
-        creation_request_cond_.wait(lock);
         continue;
       }
       // Take the pipeline from the queue and increment the busy thread count
@@ -1114,7 +1112,6 @@ void PipelineCache::CreationThread() {
     // completion event if needed (at the next iteration, or in some other
     // thread).
     {
-      std::unique_lock<std::mutex> lock(creation_request_lock_);
       --creation_threads_busy_;
     }
   }
