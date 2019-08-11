@@ -36,6 +36,15 @@ enum class PrimitiveType : uint32_t {
   kQuadList = 0x0D,
   kQuadStrip = 0x0E,
   kPolygon = 0x0F,
+
+  // Starting with this primitive mode, registers like VGT_OUTPUT_PATH_CNTL have
+  // effect (deduced from R6xx/R7xx registers, and Halo 3 also doesn't reset
+  // VGT_OUTPUT_PATH_CNTL after the first draw with tessellation).
+  // TODO(Triang3l): Find out if VGT_DRAW_INITIATOR (0x21FC on Adreno 2xx, but
+  // not seen being used in games) specifies the major mode (or if it's set
+  // somewhere else).
+  kExplicitMajorModeForceStart = 0x10,
+
   k2DCopyRectListV0 = 0x10,
   k2DCopyRectListV1 = 0x11,
   k2DCopyRectListV2 = 0x12,
@@ -43,11 +52,33 @@ enum class PrimitiveType : uint32_t {
   k2DFillRectList = 0x14,
   k2DLineStrip = 0x15,
   k2DTriStrip = 0x16,
-  // Tessellation patches (D3DTPT) - reusing 2DCopyRectList types.
+
+  // Tessellation patches (D3DTPT) when VGT_OUTPUT_PATH_CNTL & 3 is
+  // VGT_OUTPATH_TESS_EN (1).
   kLinePatch = 0x10,
   kTrianglePatch = 0x11,
   kQuadPatch = 0x12,
 };
+
+inline bool IsPrimitiveTwoFaced(bool tessellated, PrimitiveType type) {
+  if (tessellated) {
+    return type == PrimitiveType::kTrianglePatch ||
+           type == PrimitiveType::kQuadPatch;
+  }
+  switch (type) {
+    case PrimitiveType::kTriangleList:
+    case PrimitiveType::kTriangleFan:
+    case PrimitiveType::kTriangleStrip:
+    case PrimitiveType::kTriangleWithWFlags:
+    case PrimitiveType::kQuadList:
+    case PrimitiveType::kQuadStrip:
+    case PrimitiveType::kPolygon:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}
 
 enum class TessellationMode : uint32_t {
   kDiscrete = 0,
